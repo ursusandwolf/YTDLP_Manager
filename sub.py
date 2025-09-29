@@ -35,10 +35,8 @@ def clean_vtt_to_text(vtt_path):
     cleaned = re.sub(r"\d{2}:\d{2}:\d{2}\.\d{3} --> .*?\n", "", cleaned)
     cleaned = re.sub(r"align:start position:\d+%.*?\n", "", cleaned)
 
-    # Удаляем все теги <...>
+    # Удаляем все <...> теги и служебные описания
     cleaned = re.sub(r"<[^>]+>", "", cleaned)
-
-    # Удаляем служебные описания [Music], [Applause], и т.п.
     cleaned = re.sub(r"\[.*?\]", "", cleaned)
 
     # Удаляем пустые строки и HTML-сущности
@@ -50,10 +48,28 @@ def clean_vtt_to_text(vtt_path):
         if not deduped or line != deduped[-1]:
             deduped.append(line)
 
-    # Объединяем в читаемый текст
-    text = " ".join(deduped)
+    # Разбиваем по смыслу
+    paragraph_markers = ("So", "Now", "Anyway", "Today", "First", "Let’s", "Let's", "In conclusion", "To begin")
+    text_blocks = []
+    current_block = ""
 
-    return text
+    for line in deduped:
+        if any(line.startswith(marker) for marker in paragraph_markers) or \
+           (current_block and line[0].isupper() and current_block.endswith(".")):
+            # Завершаем текущий блок
+            if current_block:
+                text_blocks.append(current_block.strip())
+            current_block = line
+        else:
+            current_block += " " + line
+
+    if current_block:
+        text_blocks.append(current_block.strip())
+
+    # Объединяем с одним переносом между строками, двойным между абзацами
+    final_text = "\n".join(text_blocks)
+
+    return final_text
 
 def save_to_file(text, output_path):
     with open(output_path, "w", encoding="utf-8") as f:
