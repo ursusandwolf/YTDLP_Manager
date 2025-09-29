@@ -25,6 +25,8 @@ def download_subtitles(video_url, output_basename="temp_subs"):
     return subtitle_filename
 
 def clean_vtt_to_text(vtt_path):
+    import html
+
     with open(vtt_path, "r", encoding="utf-8") as f:
         raw = f.read()
 
@@ -33,8 +35,23 @@ def clean_vtt_to_text(vtt_path):
     cleaned = re.sub(r"\d{2}:\d{2}:\d{2}\.\d{3} --> .*?\n", "", cleaned)
     cleaned = re.sub(r"align:start position:\d+%.*?\n", "", cleaned)
 
-    lines = [line.strip() for line in cleaned.splitlines() if line.strip()]
-    text = " ".join(lines)
+    # Удаляем все теги <...>
+    cleaned = re.sub(r"<[^>]+>", "", cleaned)
+
+    # Удаляем служебные описания [Music], [Applause], и т.п.
+    cleaned = re.sub(r"\[.*?\]", "", cleaned)
+
+    # Удаляем пустые строки и HTML-сущности
+    lines = [html.unescape(line.strip()) for line in cleaned.splitlines() if line.strip()]
+
+    # Удаляем повторы подряд
+    deduped = []
+    for line in lines:
+        if not deduped or line != deduped[-1]:
+            deduped.append(line)
+
+    # Объединяем в читаемый текст
+    text = " ".join(deduped)
 
     return text
 
