@@ -3,29 +3,26 @@ import os
 import re
 from io import StringIO
 
-def download_subtitles(video_url):
+def download_subtitles(video_url, output_basename="temp_subs"):
+    subtitle_filename = f"{output_basename}.en.vtt"
+
     result = subprocess.run([
         "yt-dlp",
         "--write-auto-sub",
         "--sub-lang", "en",
         "--skip-download",
+        "--output", output_basename,
         video_url
     ], capture_output=True, text=True)
 
     if result.returncode != 0:
-        raise RuntimeError(f"yt-dlp failed:\n{result.stderr}")
+        print(result.stderr)
+        raise RuntimeError("yt-dlp failed to download subtitles.")
 
-    # search sub FN
-    for line in result.stdout.splitlines():
-        if line.endswith(".en.vtt"):
-            return line.strip()
+    if not os.path.exists(subtitle_filename):
+        raise FileNotFoundError(f"Subtitle file not found: {subtitle_filename}")
 
-    # OS search
-    for file in os.listdir():
-        if file.endswith(".en.vtt"):
-            return file
-
-    raise FileNotFoundError("Subtitle file not found.")
+    return subtitle_filename
 
 def clean_vtt_to_text(vtt_path):
     with open(vtt_path, "r", encoding="utf-8") as f:
@@ -46,8 +43,8 @@ def save_to_file(text, output_path):
         f.write(text)
 
 def main():
-    video_url = input("Введите ссылку на YouTube-видео: ").strip()
-    print("📥 Загружаем субтитры...")
+    video_url = input("🔗 Введите ссылку на YouTube-видео: ").strip()
+    print("📥 Загружаем автосубтитры...")
     vtt_file = download_subtitles(video_url)
 
     print(f"🧼 Обрабатываем файл: {vtt_file}")
