@@ -1,15 +1,16 @@
 import subprocess
+import sys
 import os
 import re
 from io import StringIO
 
-def download_subtitles(video_url, output_basename="temp_subs"):
-    subtitle_filename = f"{output_basename}.en.vtt"
+def download_subtitles(video_url, lang="en", output_basename="temp_subs"):
+    subtitle_filename = f"{output_basename}.{lang}.vtt"
 
     result = subprocess.run([
         "yt-dlp",
         "--write-auto-sub",
-        "--sub-lang", "en",
+        "--sub-lang", lang,
         "--skip-download",
         "--output", output_basename,
         video_url
@@ -103,9 +104,24 @@ def save_to_file(text, output_path):
         f.write(text)
 
 def main():
-    video_url = input("🔗 Введите ссылку на YouTube-видео: ").strip()
-    print("📥 Загружаем автосубтитры...")
-    vtt_file = download_subtitles(video_url)
+    # Обработка аргументов
+    args = sys.argv[1:]
+    video_url = None
+    lang = "en"  # язык по умолчанию
+
+    for arg in args:
+        if arg.startswith("http"):
+            video_url = arg
+        elif arg.startswith("-"):
+            lang = arg[1:].lower()
+
+    # Если аргументы не переданы — спрашиваем у пользователя
+    if not video_url:
+        video_url = input("🔗 Введите ссылку на YouTube-видео: ").strip()
+        lang = input("🌍 Укажите язык субтитров (например: en, ru, de): ").strip().lower() or "en"
+
+    print(f"📥 Загружаем автосубтитры на языке: {lang}")
+    vtt_file = download_subtitles(video_url, lang=lang)
 
     print(f"🧼 Обрабатываем файл: {vtt_file}")
     cleaned_text = clean_vtt_to_text(vtt_file)
