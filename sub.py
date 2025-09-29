@@ -24,52 +24,79 @@ def download_subtitles(video_url, output_basename="temp_subs"):
 
     return subtitle_filename
 
-def clean_vtt_to_text(vtt_path):
+def clean_vtt_to_text(vtt_path, min_timestamp_gap=300):
     import html
+    import re
 
     with open(vtt_path, "r", encoding="utf-8") as f:
         raw = f.read()
 
-    # Clean sub WEBVTT and timecodes
-    cleaned = re.sub(r"WEBVTT.*?\n", "", raw)
-    cleaned = re.sub(r"\d{2}:\d{2}:\d{2}\.\d{3} --> .*?\n", "", cleaned)
-    cleaned = re.sub(r"align:start position:\d+%.*?\n", "", cleaned)
+    # Извлекаем блоки с таймкодами и текстом
+    blocks = re.findall(r"(\d{2}:\d{2}:\d{2}\.\d{3}) --> .*?\n(.*?)\n", raw, re.DOTALL)
 
-    # Удаляем все <...> теги и служебные описания
-    cleaned = re.sub(r"<[^>]+>", "", cleaned)
-    cleaned = re.sub(r"\[.*?\]", "", cleaned)
+    cleaned_lines = []
+    last_timestamp = None
+    last_line = None
+    for timestamp_str, text in blocks:
+        # Удаляем HTML-теги и служебные описания
+        text = re.sub(r"<[^>]+>", "", text)
+        text = re.sub(r"\[.*?\]", "", text)
+        text = html.unescape(text.strip())
 
-    # Удаляем пустые строки и HTML-сущности
-    lines = [html.unescape(line.strip()) for line in cleaned.splitlines() if line.strip()]
+        if not text:
+            continue
 
-    # Удаляем повторы подряд
-    deduped = []
-    for line in lines:
-        if not deduped or line != deduped[-1]:
-            deduped.append(line)
+        # Удаляем подряд идущие повторы
+        if text == last_line:
+            continue
+        last_line = text
 
-    # Разбиваем по смыслу
-    paragraph_markers = ("So", "Now", "Anyway", "Today", "First", "Let’s", "Let's", "In conclusion", "To begin")
-    text_blocks = []
-    current_block = ""
+        # Добавляем таймкод, если прошло достаточно времени
+        timestamp = parse_timestamp(timestamp_str)
+        if last_timestamp is None or (timestamp - last_timestamp).total_seconds() >= min_timestamp_gap:
+            cleaned_lines.append(f"[{format_timestamp(timestamp)}]")
+            last_timestamp = timestamp
 
-    for line in deduped:
-        if any(line.startswith(marker) for marker in paragraph_markers) or \
-           (current_block and line[0].isupper() and current_block.endswith(".")):
-            # Завершаем текущий блок
-            if current_block:
-                text_blocks.append(current_block.strip())
-            current_block = line
-        else:
-            current_block += " " + line
+        cleaned_lines.append(text)
 
-    if current_block:
-        text_blocks.append(current_block.strip())
-
-    # Объединяем с одним переносом между строками, двойным между абзацами
-    final_text = "\n".join(text_blocks)
+    # Исправляем пунктуацию и объединяем с переносами строк
+    punctuated_lines = fix_punctuation_lines(cleaned_lines)
+    final_text = "\n".join(punctuated_lines)
 
     return final_text
+
+def parse_timestamp(ts_str):
+    from datetime import timedelta
+    h, m, s = ts_str.split(":")
+    sec, ms = s.split(".")
+    return timedelta(hours=int(h), minutes=int(m), seconds=int(sec), milliseconds=int(ms))
+
+def format_timestamp(td):
+    total_seconds = int(td.total_seconds())
+    h = total_seconds // 3600
+    m = (total_seconds % 3600) // 60
+    s = total_seconds % 60
+    return f"{h:02}:{m:02}:{s:02}"
+
+def fix_punctuation_lines(lines):
+    import re
+    punctuated = []
+    for line in lines:
+        if line.startswith("[") and line.endswith("]"):
+            punctuated.append(line)
+            continue
+
+        # Добавляем точку, если строка не заканчивается знаком
+        if not re.search(r"[.!?…]$", line):
+            line += "."
+
+        # Заглавная буква в начале
+        if line:
+            line = line[0].upper() + line[1:]
+
+        punctuated.append(line)
+
+    return punctuated
 
 def save_to_file(text, output_path):
     with open(output_path, "w", encoding="utf-8") as f:
