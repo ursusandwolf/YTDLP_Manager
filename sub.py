@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import os
+from pathlib import Path
 
 from filename import build_filename
 
@@ -141,8 +142,18 @@ def main():
     print(f"🧼 Обрабатываем файл: {vtt_file}")
     cleaned_text = clean_vtt_to_text(vtt_file)
 
-    output_file = vtt_file.replace(".vtt", ".txt")
+    # 📁 отдельная папка
+    output_dir = Path("output_text")
+    output_file = output_dir / (Path(vtt_file).stem + ".txt")
+
     save_to_file(cleaned_text, output_file)
+
+    # 🗑 удаляем vtt только если всё успешно
+    if os.path.exists(vtt_file):
+        os.remove(vtt_file)
+
+#    output_file = vtt_file.replace(".vtt", ".txt")
+#    save_to_file(cleaned_text, output_file)
     print(f"✅ Готово! Чистый текст сохранён в: {output_file}")
 
 if __name__ == "__main__":
