@@ -5,6 +5,8 @@ import re
 from io import StringIO
 
 def download_subtitles(video_url, lang="en", output_basename="temp_subs"):
+    title = get_video_title(video_url)
+    output_basename = title
     subtitle_filename = f"{output_basename}.{lang}.vtt"
 
     result = subprocess.run([
@@ -24,6 +26,24 @@ def download_subtitles(video_url, lang="en", output_basename="temp_subs"):
         raise FileNotFoundError(f"Subtitle file not found: {subtitle_filename}")
 
     return subtitle_filename
+
+def get_video_title(video_url: str) -> str:
+    result = subprocess.run(
+        ["yt-dlp", "--print", "title", video_url],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError("Failed to fetch video title")
+
+    return sanitize_filename(result.stdout.strip())
+
+def sanitize_filename(name: str) -> str:
+    import re
+    name = name.strip()
+    name = re.sub(r'[\\/*?:"<>|]', "_", name)
+    return name
 
 def clean_vtt_to_text(vtt_path, min_timestamp_gap=300):
     import html
