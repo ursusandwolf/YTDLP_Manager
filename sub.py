@@ -143,14 +143,16 @@ def main():
     cleaned_text = clean_vtt_to_text(vtt_file)
 
     # 📁 отдельная папка
-    output_dir = Path("output_text")
-    output_file = output_dir / (Path(vtt_file).stem + ".txt")
+#    output_dir = Path("output_text")
+#    output_file = output_dir / (Path(vtt_file).stem + ".txt")
 
+    output_file = vtt_file.replace(".vtt", ".txt")
     save_to_file(cleaned_text, output_file)
 
     # 🗑 удаляем vtt только если всё успешно
     if os.path.exists(vtt_file):
         os.remove(vtt_file)
+        print(f".vtt файл удален")
 
 #    output_file = vtt_file.replace(".vtt", ".txt")
 #    save_to_file(cleaned_text, output_file)
