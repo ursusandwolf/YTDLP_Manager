@@ -1,12 +1,12 @@
 import subprocess
 import sys
 import os
-import re
-from io import StringIO
+
+from filename import build_filename
 
 def download_subtitles(video_url, lang="en", output_basename="temp_subs"):
     title = get_video_title(video_url)
-    output_basename = title
+    output_basename = build_filename(title)
     subtitle_filename = f"{output_basename}.{lang}.vtt"
 
     result = subprocess.run([
@@ -37,13 +37,8 @@ def get_video_title(video_url: str) -> str:
     if result.returncode != 0:
         raise RuntimeError("Failed to fetch video title")
 
-    return sanitize_filename(result.stdout.strip())
+    return result.stdout.strip()
 
-def sanitize_filename(name: str) -> str:
-    import re
-    name = name.strip()
-    name = re.sub(r'[\\/*?:"<>|]', "_", name)
-    return name
 
 def clean_vtt_to_text(vtt_path, min_timestamp_gap=300):
     import html
