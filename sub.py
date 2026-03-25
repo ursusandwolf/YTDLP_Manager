@@ -134,7 +134,7 @@ def main():
     # Если аргументы не переданы — спрашиваем у пользователя
     if not video_url:
         video_url = input("🔗 Введите ссылку на YouTube-видео: ").strip()
-        lang = input("🌍 Укажите язык субтитров (например: en, ru, de): ").strip().lower() or "en"
+        lang = input("🌍 Укажите язык субтитров (например: en, ru, de, uk): ").strip().lower() or "en"
 
     print(f"📥 Загружаем автосубтитры на языке: {lang}")
     vtt_file = download_subtitles(video_url, lang=lang)
@@ -143,10 +143,10 @@ def main():
     cleaned_text = clean_vtt_to_text(vtt_file)
 
     # 📁 отдельная папка
-#    output_dir = Path("output_text")
+    output_dir = Path("txt")
 #    output_file = output_dir / (Path(vtt_file).stem + ".txt")
 
-    output_file = vtt_file.replace(".vtt", ".txt")
+    output_file = output_dir / vtt_file.replace(".vtt", ".txt")
     save_to_file(cleaned_text, output_file)
 
     # 🗑 удаляем vtt только если всё успешно

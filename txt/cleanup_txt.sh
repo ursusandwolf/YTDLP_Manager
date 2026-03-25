@@ -1,0 +1,1 @@
+rm -f *.txt 2>/dev/null
